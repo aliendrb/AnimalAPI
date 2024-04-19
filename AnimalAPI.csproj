@@ -12,8 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="DTOs\" />
     <Folder Include="Endpoints\" />
     <Folder Include="Validators\" />
   </ItemGroup>
