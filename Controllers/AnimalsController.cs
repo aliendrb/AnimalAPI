@@ -38,56 +38,84 @@ public class AnimalsController : ControllerBase
         }
         return Ok(response);
     }
-    [HttpGet("api/animals{id}")]
+    [HttpGet("api/animals/{id}")]
     
     public IActionResult GetAnimal(int id) 
     {
-        return Ok();
+        var response = new List<GetAnimalsResponse>();
+        using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default")))
+        {
+            var sqlCommand = new SqlCommand("SELECT IdAnimal, Name, Description, Category, Area FROM Animals WHERE IdAnimal = @1", sqlConnection);
+            sqlCommand.Parameters.AddWithValue("@1", id);
+            sqlCommand.Connection.Open();
+            var reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                response.Add(new GetAnimalsResponse(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetString(4)
+                    )
+                );
+            }
+        }
+        return Ok(response);
     }
 
-    [HttpPost("api/animals")]
+    [HttpPost]
     public IActionResult CreateAnimal(CreateAnimalDTOs request) 
     {
         using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default")))
         {
             var sqlCommand = new SqlCommand(
-                "INSERT INTO Animals (IdAnimal, Name, Description, Category, Area) values (@1, @2, @3, @4, @5);", //SELECT CAST(SCOPE_IDENTITY()) as int
+                "INSERT INTO Animals (Name, Description, Category, Area) values (@1, @2, @3, @4); SELECT CAST(SCOPE_IDENTITY() as int)",
                 sqlConnection
                 );
-            sqlCommand.Parameters.AddWithValue("@1", request.IdAnimal);
-            sqlCommand.Parameters.AddWithValue("@2", request.Name);
-            sqlCommand.Parameters.AddWithValue("@3", request.Description);
-            sqlCommand.Parameters.AddWithValue("@4", request.Category);
-            sqlCommand.Parameters.AddWithValue("@5", request.Area);
+            sqlCommand.Parameters.AddWithValue("@1", request.Name);
+            sqlCommand.Parameters.AddWithValue("@2", request.Description);
+            sqlCommand.Parameters.AddWithValue("@3", request.Category);
+            sqlCommand.Parameters.AddWithValue("@4", request.Area);
             sqlCommand.Connection.Open();
 
             var id = sqlCommand.ExecuteScalar();
-            Console.WriteLine(id);
 
-            // Check if the id is DBNull or null
-            if (id == DBNull.Value || id == null)
-            {
-                // Handle the scenario where id is DBNull or null
-                // For example, return a BadRequest or any appropriate response
-                return BadRequest("Unable to retrieve the id of the newly created record.");
-            }
-
-            // Convert the id to an integer
-            int newId;
-            if (!int.TryParse(id.ToString(), out newId))
-            {
-                // Handle the scenario where id cannot be converted to an integer
-                // For example, return a BadRequest or any appropriate response
-                return BadRequest("Unable to convert the id to an integer.");
-            }
-
-            return Created($"animals/{newId}", new CreateAnimalResponse((int)newId, request));
+            return Created($"animals/{id}", new CreateAnimalResponse((int)id, request));
         }
     }
-    //[HttpPut("api/animals/{id}")]
+
+    [HttpPut("api/animals/{id}")]
+    public IActionResult ReplaceAnimal(int id, ReplaceAnimalRequest request) 
+    {
+        using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default"))) 
+        {
+            var sqlCommand = new SqlCommand(
+                "UPDATE Animals SET Name = @1, Description = @2, Category = @3, Area = @4 WHERE IdAnimal = @5"
+                , sqlConnection);
+            sqlCommand.Parameters.AddWithValue("@1", request.Name);
+            sqlCommand.Parameters.AddWithValue("@2", request.Description);
+            sqlCommand.Parameters.AddWithValue("@3", request.Category);
+            sqlCommand.Parameters.AddWithValue("@4", request.Area);
+            sqlCommand.Parameters.AddWithValue("@5", id);
+            sqlCommand.Connection.Open();
+
+            var affectedRows = sqlCommand.ExecuteNonQuery();
+            return affectedRows == 0 ? NotFound() : NoContent();
+        }
+    }
+
     [HttpDelete("api/animals/{id}")]
     public IActionResult DeleteAnimal(int id)
     {
-        return Ok();
+        using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default")))
+        {
+            var sqlCommand = new SqlCommand("DELETE FROM Animals WHERE IdAnimal = @1", sqlConnection);
+            sqlCommand.Parameters.AddWithValue("@1", id);
+            sqlCommand.Connection.Open();
+            var affectedRows = sqlCommand.ExecuteNonQuery();
+
+            return affectedRows == 0 ? NotFound() : NoContent();
+        }
     }
 }

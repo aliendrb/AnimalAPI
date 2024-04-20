@@ -2,7 +2,7 @@
 
 namespace AnimalAPI.DTOs;
 
-public record ReplaceAnimalDTOs(
+public record ReplaceAnimalRequest(
     int IdAnimal,
     [Required][MaxLength(200)] string Name,
     [MaxLength(200)] string Description,
