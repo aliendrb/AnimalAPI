@@ -15,7 +15,8 @@ public class AnimalsController : ControllerBase
         _configuration = configuration;
     }
 
-    [HttpGet("api/animals")]
+
+/*    [HttpGet("api/animals")]
     public IActionResult GetAllAnimals() 
     {
         var response = new List<GetAnimalsResponse>();
@@ -37,9 +38,45 @@ public class AnimalsController : ControllerBase
             }
         }
         return Ok(response);
+    }*/
+
+
+    [HttpGet("api/animals")]
+    public IActionResult GetAllAnimals([FromQuery] string orderBy = "name")
+    {
+        var response = new List<GetAnimalsResponse>();
+        using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default")))
+        {
+            string orderByClause;
+            if (string.IsNullOrEmpty(orderBy))
+            {
+                orderByClause = "ORDER BY name";
+            }
+            else
+            {
+                orderByClause = $"ORDER BY {orderBy}";
+            }
+
+            var sqlCommand = new SqlCommand($"SELECT * FROM Animals {orderByClause}", sqlConnection);
+            sqlCommand.Connection.Open();
+            var reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                response.Add(new GetAnimalsResponse(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetString(4)
+                    )
+                );
+            }
+        }
+        return Ok(response);
     }
+
+
     [HttpGet("api/animals/{id}")]
-    
     public IActionResult GetAnimal(int id) 
     {
         var response = new List<GetAnimalsResponse>();
@@ -64,7 +101,8 @@ public class AnimalsController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost]
+
+    [HttpPost("api/animals")]
     public IActionResult CreateAnimal(CreateAnimalDTOs request) 
     {
         using (var sqlConnection = new SqlConnection(_configuration.GetConnectionString("Default")))
@@ -85,6 +123,7 @@ public class AnimalsController : ControllerBase
         }
     }
 
+
     [HttpPut("api/animals/{id}")]
     public IActionResult ReplaceAnimal(int id, ReplaceAnimalRequest request) 
     {
@@ -104,6 +143,7 @@ public class AnimalsController : ControllerBase
             return affectedRows == 0 ? NotFound() : NoContent();
         }
     }
+
 
     [HttpDelete("api/animals/{id}")]
     public IActionResult DeleteAnimal(int id)
